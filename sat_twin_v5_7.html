@@ -1,0 +1,1318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAT-7 · Digital Twin · ECOS-2</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&family=Barlow+Condensed:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+:root{
+  --bg:#000408;--panel:rgba(2,9,18,0.97);--border:rgba(0,220,160,0.15);
+  --teal:#00dca0;--amber:#f5a130;--red:#ff3355;--purple:#a855f7;--blue:#38bdf8;
+  --text:#b8ccdc;--dim:#3f5565;--hi:#dff0f8;
+  --nom:#00dca0;--caut:#f5a130;--dngr:#ff3355;
+  --fm:'Share Tech Mono',monospace;--fu:'Rajdhani',sans-serif;--fd:'Barlow Condensed',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden;background:#000}
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9000;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px)}
+#app{display:flex;flex-direction:column;height:100vh}
+#main{display:flex;flex:1;overflow:hidden}
+#three-canvas{flex:1;position:relative;cursor:grab}
+#three-canvas:active{cursor:grabbing}
+
+/* HEADER */
+#hdr{display:flex;align-items:center;justify-content:space-between;
+  padding:6px 16px;flex-shrink:0;z-index:200;
+  background:rgba(0,4,10,0.98);border-bottom:1px solid var(--border)}
+.hl{display:flex;align-items:center;gap:12px}
+.sid{font-family:var(--fm);font-size:12px;color:var(--teal);letter-spacing:2px}
+.sid span{color:var(--dim)}
+.stag{font-family:var(--fd);font-size:8px;letter-spacing:3px;color:var(--dim);text-transform:uppercase}
+.vs{width:1px;height:28px;background:var(--border)}
+.hs{display:flex;flex-direction:column;align-items:center;gap:1px}
+.hv{font-family:var(--fm);font-size:11px;color:var(--blue)}
+.hl2{font-family:var(--fd);font-size:8px;letter-spacing:2px;color:var(--dim);text-transform:uppercase}
+.hc{display:flex;flex-direction:column;align-items:center}
+.met{font-family:var(--fm);font-size:21px;color:var(--hi);letter-spacing:3px}
+.metl{font-family:var(--fd);font-size:8px;letter-spacing:3px;color:var(--dim)}
+.dbadge{display:flex;align-items:center;gap:7px;padding:5px 12px;
+  border:1px solid currentColor;border-radius:2px;
+  font-family:var(--fm);font-size:11px;letter-spacing:2px;position:relative;overflow:hidden}
+.dbadge::before{content:'';position:absolute;inset:0;background:currentColor;opacity:0.07}
+.ddot{width:6px;height:6px;border-radius:50%;background:currentColor;
+  animation:pd 1.4s ease-in-out infinite}
+@keyframes pd{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.3;transform:scale(0.6)}}
+.cn{color:var(--nom)}.cc{color:var(--caut)}.ch{color:var(--purple)}.cd{color:var(--dngr)}
+
+/* RIGHT PANEL */
+#rp{width:295px;flex-shrink:0;background:var(--panel);border-left:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;z-index:100}
+.rs{border-bottom:1px solid var(--border);flex-shrink:0}
+.rt{font-family:var(--fd);font-size:9px;letter-spacing:3px;color:var(--dim);text-transform:uppercase;
+  padding:5px 12px;border-bottom:1px solid rgba(0,220,160,0.06)}
+#verdict{padding:9px 12px}
+.vrow{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:5px}
+.vlbl{font-family:var(--fm);font-size:18px;letter-spacing:2px;line-height:1}
+.vcv{display:block;font-family:var(--fm);font-size:18px;color:var(--teal);line-height:1}
+.vcl{font-family:var(--fd);font-size:8px;color:var(--dim);letter-spacing:2px}
+.vsub{font-family:var(--fm);font-size:8px;color:var(--dim);margin-bottom:4px}
+.vrat{font-family:var(--fd);font-size:10px;color:var(--dim);line-height:1.4;min-height:26px}
+.pills{display:flex;gap:4px;padding:5px 12px}
+.pill{flex:1;text-align:center;font-family:var(--fm);font-size:8px;letter-spacing:1px;
+  padding:3px 2px;border-radius:2px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07)}
+.pon{color:var(--teal);border-color:rgba(0,220,160,0.28);background:rgba(0,220,160,0.05)}
+.poff{color:var(--dim)}
+.pwarn{color:var(--amber);border-color:rgba(245,161,48,0.28);background:rgba(245,161,48,0.05)}
+.pdng{color:var(--red);border-color:rgba(255,51,85,0.28);background:rgba(255,51,85,0.05)}
+#clist{flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(0,220,160,0.15) transparent}
+.crow{display:flex;align-items:center;gap:6px;padding:5px 12px;
+  border-bottom:1px solid rgba(0,220,160,0.04);transition:background 0.3s}
+.crow:hover{background:rgba(0,220,160,0.02)}
+.cico{font-size:12px;width:17px;text-align:center;flex-shrink:0}
+.cinfo{flex:1;min-width:0}
+.chdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px}
+.clbl{font-family:var(--fd);font-size:10px;color:var(--text);letter-spacing:0.5px;text-transform:uppercase;font-weight:600}
+.cval{font-family:var(--fm);font-size:10px;color:var(--hi);white-space:nowrap}
+.cbar{height:2px;background:rgba(255,255,255,0.05);border-radius:1px;overflow:hidden}
+.cfill{height:100%;border-radius:1px;transition:width .9s cubic-bezier(.4,0,.2,1),background .5s}
+.cst{font-family:var(--fm);font-size:8px;letter-spacing:1.5px;padding:2px 5px;border-radius:2px;flex-shrink:0;margin-left:2px}
+.sn{color:var(--nom);background:rgba(0,220,160,0.1)}
+.sc{color:var(--caut);background:rgba(245,161,48,0.1)}
+.sd{color:var(--dngr);background:rgba(255,51,85,0.1)}
+#logbox{max-height:100px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(0,220,160,0.15) transparent}
+.lrow{display:flex;align-items:center;gap:6px;padding:4px 12px;
+  border-bottom:1px solid rgba(0,220,160,0.04);font-family:var(--fm);font-size:8px}
+.lt{color:var(--dim);white-space:nowrap}
+.lb{padding:1px 5px;border-radius:2px;font-size:7px;letter-spacing:1px;flex-shrink:0}
+.ld{color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:8px}
+
+/* Canvas overlays */
+.cov{position:absolute;pointer-events:none;font-family:var(--fm);font-size:9px;
+  color:rgba(0,220,160,0.5);letter-spacing:1px;line-height:1.9;z-index:10}
+#cov-tl{top:11px;left:11px}
+#cov-br{bottom:11px;right:11px;text-align:right}
+
+/* Camera buttons */
+#camctl{position:absolute;bottom:12px;left:12px;z-index:20;display:flex;flex-direction:column;gap:3px}
+.cbtn{font-family:var(--fm);font-size:8px;letter-spacing:1px;padding:5px 9px;border-radius:2px;
+  cursor:pointer;background:rgba(0,4,10,0.88);border:1px solid var(--border);color:var(--teal);
+  transition:all .2s;user-select:none}
+.cbtn:hover{background:rgba(0,220,160,0.1);border-color:var(--teal)}
+.cbtn.act{background:rgba(0,220,160,0.14);border-color:var(--teal);color:#fff}
+
+/* Earth rotation controls */
+#earthctl{position:absolute;bottom:12px;right:12px;z-index:20;display:flex;flex-direction:column;gap:3px;align-items:flex-end}
+.ectl-label{font-family:var(--fm);font-size:8px;letter-spacing:2px;color:rgba(0,220,160,0.45);text-align:right;margin-bottom:2px}
+.ectl-row{display:flex;gap:3px}
+.ebtn{font-family:var(--fm);font-size:8px;letter-spacing:1px;padding:4px 8px;border-radius:2px;
+  cursor:pointer;background:rgba(0,4,10,0.88);border:1px solid rgba(56,189,248,0.25);color:#38bdf8;
+  transition:all .2s;user-select:none}
+.ebtn:hover{background:rgba(56,189,248,0.1);border-color:#38bdf8}
+.ebtn.act{background:rgba(56,189,248,0.16);border-color:#38bdf8;color:#fff}
+.ebtn.stop{border-color:rgba(245,161,48,0.35);color:var(--amber)}
+.ebtn.stop:hover{background:rgba(245,161,48,0.1);border-color:var(--amber)}
+
+::-webkit-scrollbar{width:2px}
+::-webkit-scrollbar-thumb{background:rgba(0,220,160,0.18);border-radius:1px}
+</style>
+</head>
+<body>
+<div id="app">
+<!-- HEADER -->
+<div id="hdr">
+  <div class="hl">
+    <div>
+      <div class="sid">SAT<span>-</span>7 <span>·</span> ECOS<span>-</span>2 <span>·</span> ORB<span>-</span>14827</div>
+      <div class="stag">Genesis Mission · LEO · 51.6° Inclination</div>
+    </div>
+    <div class="vs"></div>
+    <div class="hs"><div class="hv" id="h-alt">420.3</div><div class="hl2">ALT km</div></div>
+    <div class="hs"><div class="hv" id="h-vel">7.66</div><div class="hl2">VEL km/s</div></div>
+    <div class="hs"><div class="hv" id="h-nu">0.0°</div><div class="hl2">TRUE ANOM</div></div>
+    <div class="hs"><div class="hv" id="h-period">92.7 min</div><div class="hl2">PERIOD</div></div>
+  </div>
+  <div class="hc">
+    <div class="met" id="met">T+ 00:00:00</div>
+    <div class="metl">MISSION ELAPSED TIME</div>
+  </div>
+  <div class="hl">
+    <div class="hs"><div class="hv" id="h-lat">0.00°</div><div class="hl2">LAT</div></div>
+    <div class="hs"><div class="hv" id="h-lon">0.00°</div><div class="hl2">LON</div></div>
+    <div class="hs"><div class="hv" id="h-ecl">NO</div><div class="hl2">ECLIPSE</div></div>
+    <div class="vs"></div>
+    <div class="dbadge cn" id="dbadge"><div class="ddot"></div><span id="dbtxt">NOMINAL</span></div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+  <div id="three-canvas">
+    <div class="cov" id="cov-tl">
+      <div id="ov-sun">☀ SUNLIT</div>
+      <div id="ov-gs">GS  NONE</div>
+      <div id="ov-warp">WARP ×10</div>
+    </div>
+    <div class="cov" id="cov-br">
+      <div id="ov-anom">ν  0.000°</div>
+      <div id="ov-ep">EPOCH  J2026.22</div>
+    </div>
+    <div id="camctl">
+      <div class="cbtn act" id="btn-trk" onclick="setCam('track')">⊙ TRACK SAT</div>
+      <div class="cbtn"     id="btn-orb" onclick="setCam('orbit')">⊕ ORBIT VIEW</div>
+      <div class="cbtn"     id="btn-ndr" onclick="setCam('nadir')">↓ NADIR</div>
+      <div class="cbtn"     id="btn-fre" onclick="setCam('free')">✥ ROTATE GLOBE</div>
+      <div class="cbtn"     id="btn-sol" onclick="setCam('solar')">☀ SOLAR VIEW</div>
+    </div>
+
+    <!-- Earth Rotation + Time Controls -->
+    <div id="earthctl">
+      <div class="ectl-label">⊕ ROT · TIME WARP</div>
+      <div class="ectl-row">
+        <div class="ebtn stop" id="er-stop" onclick="setEarthRot(0)">■ STOP</div>
+        <div class="ebtn act"  id="er-real"  onclick="setEarthRot(1)">REAL</div>
+        <div class="ebtn" id="er-10x"  onclick="setEarthRot(10)">×10</div>
+      </div>
+      <div class="ectl-row">
+        <div class="ebtn" id="er-50x"  onclick="setEarthRot(50)">×50</div>
+        <div class="ebtn" id="er-200x" onclick="setEarthRot(200)">×200</div>
+        <div class="ebtn" id="er-500x" onclick="setEarthRot(500)">×500</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div id="rp">
+    <div class="rs">
+      <div class="rt">Ethics Decision Engine · ECOS-2</div>
+      <div id="verdict">
+        <div class="vrow">
+          <div><div class="vlbl cn" id="vlbl">NOMINAL</div><div class="vsub" id="vsub">ALL CONSTRAINTS NOMINAL</div></div>
+          <div><span class="vcv" id="vconf">97%</span><span class="vcl">CONFIDENCE</span></div>
+        </div>
+        <div class="vrat" id="vrat">All eight constraint axes within nominal design envelope.</div>
+      </div>
+    </div>
+    <div class="rs">
+      <div class="pills">
+        <div class="pill pon" id="p-ecl">☀ SUNLIT</div>
+        <div class="pill pon" id="p-gs">◉ GS LINK</div>
+        <div class="pill pon" id="p-mode">⊙ NOM OPS</div>
+      </div>
+    </div>
+    <div class="rt">Constraint Telemetry · 8-AXIS</div>
+    <div id="clist"></div>
+    <div class="rs"><div class="rt">Decision Log</div></div>
+    <div id="logbox"></div>
+  </div>
+</div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   CONSTRAINTS
+══════════════════════════════════════════════════════════════ */
+const CDEFS=[
+  {id:'power',  lbl:'Power / Battery',   ico:'⚡',base:72, amp:18,period:28,ph:0.0, dir:1, cth:35,dth:15, fmt:v=>`${v.toFixed(1)}%`},
+  {id:'thermal',lbl:'Thermal',           ico:'🌡',base:24, amp:16,period:38,ph:1.1, dir:0, opt:22,cth:14,dth:8,  fmt:v=>`${v.toFixed(1)}°C`},
+  {id:'compute',lbl:'Processing / CPU',  ico:'⚙',base:54, amp:22,period:19,ph:2.3, dir:-1,cth:75,dth:90, fmt:v=>`${v.toFixed(1)}%`},
+  {id:'health', lbl:'System Health',     ico:'♥',base:88, amp:8, period:60,ph:0.7, dir:1, cth:60,dth:40, fmt:v=>`${v.toFixed(1)}%`},
+  {id:'comms',  lbl:'Communication',     ico:'📡',base:-72,amp:18,period:90,ph:3.1, dir:1, cth:-90,dth:-105,fmt:v=>`${v.toFixed(0)} dBm`},
+  {id:'risk',   lbl:'Risk Index',        ico:'⚠',base:.18,amp:.14,period:45,ph:1.8,dir:-1,cth:.4,dth:.65, fmt:v=>v.toFixed(3)},
+  {id:'irrev',  lbl:'Irreversibility',   ico:'∞',base:.12,amp:.10,period:55,ph:4.2,dir:-1,cth:.35,dth:.6,  fmt:v=>v.toFixed(3)},
+  {id:'mission',lbl:'Mission Progress',  ico:'🎯',base:34, amp:4, period:120,ph:.2, dir:1, cth:20,dth:10, fmt:v=>`${v.toFixed(1)}%`},
+];
+const SCOL={NOMINAL:'#00dca0',CAUTION:'#f5a130',HOLD:'#a855f7',ABORT:'#ff3355'};
+const SCLS={NOMINAL:'cn',CAUTION:'cc',HOLD:'ch',ABORT:'cd'};
+let cV={},cH={},cS={},decision='NOMINAL',decLog=[],missionSec=0,simT=0;
+let inEcl=false,inGs=false;
+
+function nz(t,s){return Math.sin(t*7.3+s)*.3+Math.sin(t*13.7+s*2)*.15+Math.sin(t*31.1+s*.7)*.07}
+
+function runConstraints(){
+  for(const c of CDEFS){
+    let v=c.base+c.amp*Math.sin(simT*(Math.PI*2)/c.period+c.ph)+c.amp*.25*nz(simT/c.period,c.ph*10);
+    if(c.id==='power'  && inEcl) v=Math.max(v*.55-8,4);
+    if(c.id==='thermal') v+=inEcl?-10:4;
+    if(c.id==='comms' && !inGs) v-=28;
+    cV[c.id]=v;
+    let h;
+    if(c.dir===1)       h=Math.max(0,Math.min(100,(v-c.dth)/(100-c.dth)*100));
+    else if(c.dir===-1) h=Math.max(0,Math.min(100,(c.dth-v)/c.dth*100));
+    else{const d=Math.abs(v-c.opt);h=Math.max(0,Math.min(100,100-(d/c.dth)*100));}
+    cH[c.id]=h;
+    let st;
+    if(c.dir===1)       st=v<=c.dth?'D':v<=c.cth?'C':'N';
+    else if(c.dir===-1) st=v>=c.dth?'D':v>=c.cth?'C':'N';
+    else{const d=Math.abs(v-c.opt);st=d>=c.dth?'D':d>=c.cth?'C':'N';}
+    cS[c.id]=st;
+  }
+  const dc=Object.values(cS).filter(s=>s==='D').length;
+  const cc=Object.values(cS).filter(s=>s==='C').length;
+  const nd=(dc>=2||cS.power==='D'||cS.thermal==='D')?'ABORT':
+            (dc>=1||(cS.risk!=='N'&&cS.irrev!=='N')||cc>=3)?'HOLD':
+            (cc>=1)?'CAUTION':'NOMINAL';
+  if(nd!==decision){
+    const aff=Object.keys(cS).filter(k=>cS[k]!=='N');
+    decLog.unshift({ts:metFmt(missionSec),dec:nd,aff});
+    if(decLog.length>8)decLog.pop();
+    decision=nd;
+    refreshSatColor();
+  }
+}
+
+function metFmt(s){
+  return`${Math.floor(s/3600).toString().padStart(2,'0')}:${Math.floor((s%3600)/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   UI
+══════════════════════════════════════════════════════════════ */
+function buildUI(){
+  document.getElementById('clist').innerHTML=CDEFS.map(c=>`
+    <div class="crow">
+      <div class="cico">${c.ico}</div>
+      <div class="cinfo">
+        <div class="chdr">
+          <div class="clbl">${c.lbl}</div>
+          <div style="display:flex;align-items:center;gap:2px">
+            <div class="cval" id="cv-${c.id}">—</div>
+            <div class="cst sn" id="cs-${c.id}">NOM</div>
+          </div>
+        </div>
+        <div class="cbar"><div class="cfill" id="cf-${c.id}" style="width:50%;background:var(--teal)"></div></div>
+      </div>
+    </div>`).join('');
+}
+
+let lastUI=0;
+function updateUI(nu){
+  const now=performance.now();
+  if(now-lastUI<120)return;
+  lastUI=now;
+  document.getElementById('met').textContent='T+ '+metFmt(missionSec);
+  document.getElementById('h-nu').textContent=nu.toFixed(1)+'°';
+  document.getElementById('ov-anom').textContent='ν  '+nu.toFixed(2)+'°';
+  document.getElementById('h-ecl').textContent=inEcl?'YES':'NO';
+  document.getElementById('ov-sun').textContent=inEcl?'◑ ECLIPSE':'☀ SUNLIT';
+  document.getElementById('ov-gs').textContent=inGs?'GS  ACTIVE':'GS  NONE';
+
+  const color=SCOL[decision],cls=SCLS[decision];
+  const db=document.getElementById('dbadge');
+  db.className='dbadge '+cls;
+  document.getElementById('dbtxt').textContent=decision;
+  const vl=document.getElementById('vlbl');
+  vl.textContent=decision;vl.className='vlbl '+cls;
+  const vc=document.getElementById('vconf');
+  const conf=Math.max(62,97-Object.values(cH).reduce((s,h)=>s+Math.max(0,70-h),0)*.4).toFixed(0);
+  vc.textContent=conf+'%';vc.style.color=color;
+  const dK=Object.keys(cS).filter(k=>cS[k]==='D');
+  const cK=Object.keys(cS).filter(k=>cS[k]==='C');
+  document.getElementById('vsub').textContent=dK.length?'CRITICAL: '+dK.join(', ').toUpperCase():cK.length?'CAUTION: '+cK.join(', ').toUpperCase():'ALL CONSTRAINTS WITHIN LIMITS';
+  document.getElementById('vrat').textContent={
+    NOMINAL:'All eight constraint axes nominal. System operating within design envelope.',
+    CAUTION:'One or more constraints approaching boundary. Enhanced monitoring active.',
+    HOLD:'Constraint violation detected. Autonomous operations suspended.',
+    ABORT:'CRITICAL: Multiple violations detected. Safe-mode sequence initiated.'
+  }[decision];
+  setPill('p-ecl',inEcl?'◑ ECLIPSE':'☀ SUNLIT',inEcl?'pwarn':'pon');
+  setPill('p-gs', inGs?'◉ GS ACTIVE':'○ NO LINK',inGs?'pon':'poff');
+  setPill('p-mode',decision==='NOMINAL'?'⊙ NOM OPS':'⊗ '+decision+' OPS',
+          decision==='NOMINAL'?'pon':decision==='CAUTION'?'pwarn':'pdng');
+  for(const c of CDEFS){
+    const v=cV[c.id];if(v===undefined)continue;
+    const st=cS[c.id],h=cH[c.id];
+    document.getElementById(`cv-${c.id}`).textContent=c.fmt(v);
+    const se=document.getElementById(`cs-${c.id}`);
+    se.textContent=st==='N'?'NOM':st==='C'?'CAUT':'DNGR';
+    se.className='cst '+(st==='N'?'sn':st==='C'?'sc':'sd');
+    const be=document.getElementById(`cf-${c.id}`);
+    be.style.width=Math.max(2,h)+'%';
+    be.style.background=st==='N'?'var(--teal)':st==='C'?'var(--amber)':'var(--red)';
+  }
+  document.getElementById('logbox').innerHTML=decLog.length===0
+    ?`<div class="lrow"><span class="lt">—</span><span class="ld">No state transitions</span></div>`
+    :decLog.map(e=>`<div class="lrow"><span class="lt">${e.ts}</span>
+      <span class="lb" style="background:${SCOL[e.dec]}18;color:${SCOL[e.dec]}">${e.dec}</span>
+      <span class="ld">${e.aff.join(', ')||'nominal'}</span></div>`).join('');
+}
+
+function setPill(id,txt,cls){const e=document.getElementById(id);e.textContent=txt;e.className='pill '+cls;}
+
+/* ══════════════════════════════════════════════════════════════
+   THREE.JS SCENE
+══════════════════════════════════════════════════════════════ */
+const container=document.getElementById('three-canvas');
+const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+renderer.shadowMap.enabled=true;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.1;
+container.appendChild(renderer.domElement);
+renderer.domElement.style.cssText='position:absolute;inset:0;width:100%;height:100%';
+
+const scene3=new THREE.Scene();
+const camera3=new THREE.PerspectiveCamera(45,2,1000,2e12);
+
+// ── RESIZE
+function onResize(){
+  const W=container.clientWidth,H=container.clientHeight;
+  renderer.setSize(W,H);
+  camera3.aspect=W/H;
+  camera3.updateProjectionMatrix();
+}
+window.addEventListener('resize',onResize);onResize();
+
+// ── STARS (procedural buffer)
+{
+  const N=8000,pos=new Float32Array(N*3),col=new Float32Array(N*3);
+  const R=8e10; // large enough to surround solar system
+  for(let i=0;i<N;i++){
+    const th=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1);
+    const r=R*(0.8+Math.random()*.2);
+    pos[i*3]  =r*Math.sin(ph)*Math.cos(th);
+    pos[i*3+1]=r*Math.sin(ph)*Math.sin(th);
+    pos[i*3+2]=r*Math.cos(ph);
+    const bri=0.4+Math.random()*.6;
+    const warm=Math.random();
+    col[i*3]=bri*(0.85+warm*.15);col[i*3+1]=bri*(0.90+warm*.05);col[i*3+2]=bri*(1.0-warm*.1);
+  }
+  const sg=new THREE.BufferGeometry();
+  sg.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  sg.setAttribute('color',new THREE.BufferAttribute(col,3));
+  scene3.add(new THREE.Points(sg,new THREE.PointsMaterial({size:120000,vertexColors:true,sizeAttenuation:true})));
+}
+
+// ── EARTH
+const EARTH_R=6371000;
+const earthGeo=new THREE.SphereGeometry(EARTH_R,64,64);
+
+// Real NASA Blue Marble + night lights + cloud textures
+// Hosted on raw.githubusercontent.com which sends Access-Control-Allow-Origin: *
+const txLoader=new THREE.TextureLoader();
+txLoader.crossOrigin='anonymous';
+const BASE='https://raw.githubusercontent.com/turban/webgl-earth/master/images/';
+const tDay   =txLoader.load(BASE+'2_no_clouds_4k.jpg');
+const tNight =txLoader.load(BASE+'5_night_4k.jpg');
+const tClouds=txLoader.load(BASE+'fair_clouds_4k.png');
+const tWater =txLoader.load(BASE+'water_4k.png');
+const tBump  =txLoader.load(BASE+'elev_bump_4k.jpg');
+[tDay,tNight,tClouds,tWater,tBump].forEach(t=>{
+  t.wrapS=t.wrapT=THREE.RepeatWrapping;
+  t.anisotropy=4;
+});
+
+const earthMat=new THREE.ShaderMaterial({
+  uniforms:{
+    uTime:  {value:0},
+    uSunDir:{value:new THREE.Vector3(1,0,0)},
+    tDay:   {value:tDay},
+    tNight: {value:tNight},
+    tClouds:{value:tClouds},
+    tWater: {value:tWater},
+    tBump:  {value:tBump},
+  },
+  vertexShader:`
+    varying vec3 vNormal;
+    varying vec3 vPosition;
+    varying vec2 vUv;
+    void main(){
+      // World-space normal — correct so lighting responds to Earth mesh rotation
+      vNormal   = normalize(mat3(modelMatrix) * normal);
+      vPosition = (modelMatrix*vec4(position,1.0)).xyz;
+      vUv       = uv;
+      gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0);
+    }
+  `,
+  fragmentShader:`
+    uniform float     uTime;
+    uniform vec3      uSunDir;
+    uniform sampler2D tDay;
+    uniform sampler2D tNight;
+    uniform sampler2D tClouds;
+    uniform sampler2D tWater;
+    uniform sampler2D tBump;
+    varying vec3 vNormal;
+    varying vec3 vPosition;
+    varying vec2 vUv;
+
+    void main(){
+      vec3  nrm    = normalize(vNormal);
+      vec3  sunDir = normalize(uSunDir);
+
+      // Full-sphere lighting — no hard clamp on either side
+      float NdotL   = dot(nrm, sunDir);
+      float termDay = smoothstep(-0.28, 0.30, NdotL);  // very wide soft twilight
+
+      // ── Surface maps (no clouds)
+      vec4  dayCol  = texture2D(tDay,   vUv);
+      vec3  nightCol= texture2D(tNight, vUv).rgb;
+      float isWater = texture2D(tWater, vUv).r;
+
+      // ── Day: diffuse + generous ambient so shadow side stays bright
+      float diffuse = max(0.0, NdotL);
+      float ambient = 0.12;                            // raised from 0.06 → softer shadow
+      vec3  surface = dayCol.rgb * (ambient + diffuse * (1.0 - ambient));
+
+      // ── Night side: city lights, blended with dim day surface for softness
+      vec3 nightLit = nightCol * 1.8;
+      // Blend a dim version of day surface into night to reduce harsh darkness
+      nightLit = mix(nightLit, dayCol.rgb * 0.08, 0.5);
+
+      // ── Smooth blend across wide terminator
+      vec3 lit = mix(nightLit, surface, termDay);
+
+      // ── Subtle twilight fringe
+      float twilight = smoothstep(0.0, 0.18, NdotL) * (1.0 - smoothstep(0.02, 0.26, NdotL));
+      lit += vec3(0.95, 0.55, 0.15) * twilight * 0.15;
+
+      // ── Ocean specular
+      vec3  viewDir = normalize(cameraPosition - vPosition);
+      vec3  halfV   = normalize(sunDir + viewDir);
+      float spec    = pow(max(0.0, dot(nrm, halfV)), 160.0);
+      spec *= isWater * diffuse;
+      lit += vec3(0.60, 0.78, 1.0) * spec * 0.50;
+
+      gl_FragColor = vec4(lit, 1.0);
+    }
+  `,
+  side:THREE.FrontSide
+});
+
+const earth=new THREE.Mesh(earthGeo,earthMat);
+scene3.add(earth);
+
+// ── ATMOSPHERE
+const atmosMat=new THREE.ShaderMaterial({
+  uniforms:{uSunDir:{value:new THREE.Vector3(1,0,0)}},
+  vertexShader:`
+    varying vec3 vNormal;varying vec3 vPos;
+    void main(){vNormal=normalize(mat3(modelMatrix)*normal);vPos=(modelMatrix*vec4(position,1.0)).xyz;
+      gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}
+  `,
+  fragmentShader:`
+    uniform vec3 uSunDir;
+    varying vec3 vNormal;varying vec3 vPos;
+    void main(){
+      vec3 viewDir=normalize(cameraPosition-vPos);
+      float rim=1.0-max(0.0,dot(viewDir,vNormal));
+      float diff=max(0.0,dot(normalize(vNormal),normalize(uSunDir)));
+      float scatter=pow(rim,3.5)*(0.3+0.7*diff);
+      vec3 atmCol=mix(vec3(0.1,0.3,0.9),vec3(0.4,0.65,1.0),diff);
+      gl_FragColor=vec4(atmCol,scatter*0.65);
+    }
+  `,
+  side:THREE.BackSide,
+  transparent:true,blending:THREE.AdditiveBlending,depthWrite:false
+});
+const atmos=new THREE.Mesh(new THREE.SphereGeometry(EARTH_R*1.025,48,48),atmosMat);
+scene3.add(atmos);
+
+// ── SOLAR SYSTEM  ══════════════════════════════════════════════
+const AU = EARTH_R * 230;
+const SUN_ANGLE_RATE = 1.2e-5;   // Earth orbital speed (sim-seconds)
+const SUN_DRIFT_UP   = AU * 8e-6; // Sun moves upward slowly — galactic helical drift
+
+// ── SUN
+const sunMat = new THREE.ShaderMaterial({
+  uniforms:{ uTime:{value:0} },
+  vertexShader:`varying vec3 vN;varying vec3 vP;
+    void main(){vN=normalize(normalMatrix*normal);vP=(modelMatrix*vec4(position,1.0)).xyz;
+      gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+  fragmentShader:`uniform float uTime;varying vec3 vN;varying vec3 vP;
+    float h(vec2 p){p=fract(p*vec2(127.1,311.7));p+=dot(p,p+45.32);return fract(p.x*p.y);}
+    float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);
+      return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}
+    void main(){
+      float lon=atan(vP.z,vP.x),lat=asin(vP.y/length(vP));
+      vec2 uv=vec2(lon/6.28318+0.5,lat/3.14159+0.5);
+      float s=n(uv*4.0+uTime*0.05)+0.5*n(uv*8.0+uTime*0.08)+0.25*n(uv*16.0);
+      vec3 col=mix(vec3(1.0,0.55,0.1),vec3(1.0,0.92,0.4),s);
+      col=mix(col,vec3(1.0,1.0,0.85),pow(s,3.0)*0.4);
+      gl_FragColor=vec4(col,1.0);}`,
+});
+const sunSphere = new THREE.Mesh(new THREE.SphereGeometry(EARTH_R*20,32,32), sunMat);
+const sunGlow = new THREE.Mesh(new THREE.SphereGeometry(EARTH_R*34,24,24),
+  new THREE.ShaderMaterial({
+    uniforms:{},
+    vertexShader:`varying vec3 vN;varying vec3 vP;void main(){vN=normalize(normalMatrix*normal);vP=(modelMatrix*vec4(position,1.0)).xyz;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+    fragmentShader:`varying vec3 vN;varying vec3 vP;void main(){vec3 v=normalize(cameraPosition-vP);float r=1.0-max(0.0,dot(v,vN));gl_FragColor=vec4(1.0,0.75,0.2,pow(r,1.8)*0.8);}`,
+    side:THREE.BackSide,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false
+  })
+);
+const sunCorona = new THREE.Mesh(new THREE.SphereGeometry(EARTH_R*55,16,16),
+  new THREE.MeshBasicMaterial({color:0xff9920,transparent:true,opacity:0.06,side:THREE.BackSide})
+);
+const sunPointLight = new THREE.PointLight(0xfff8f0, 4.0, AU*45, 0.4);
+const sunGroup = new THREE.Group();
+sunGroup.add(sunSphere, sunGlow, sunCorona, sunPointLight);
+scene3.add(sunGroup);
+sunGroup.visible = false;
+
+// ── PLANET DATA  [name, AU, color, sizeR, orbSpeed, inclDeg, hasRing]
+const PLANET_DATA = [
+  ['Mercury', 0.39, 0xaaaaaa, 0.38, 4.15,  7.0, false],
+  ['Venus',   0.72, 0xddbb66, 0.96, 1.62,  3.4, false],
+  ['Mars',    1.52, 0xcc5533, 0.54, 0.53,  1.9, false],
+  ['Jupiter', 5.20, 0xd4aa70, 4.80, 0.084, 1.3, false],
+  ['Saturn',  9.54, 0xe8d890, 4.00, 0.034, 2.5, true ],
+  ['Uranus',  19.2, 0x88ddee, 2.50, 0.012, 0.8, false],
+  ['Neptune', 30.1, 0x4466cc, 2.40, 0.006, 1.8, false],
+];
+
+const planetMeshes = [];
+const solarGroup = new THREE.Group();
+scene3.add(solarGroup);
+solarGroup.visible = false;
+
+// 3D helix trail showing past sun positions (galactic motion)
+const HELIX_N = 320;
+const helixPts  = new Float32Array(HELIX_N * 3);
+const helixGeo  = new THREE.BufferGeometry();
+helixGeo.setAttribute('position', new THREE.BufferAttribute(helixPts, 3));
+const helixLine = new THREE.Line(helixGeo, new THREE.LineBasicMaterial({color:0xffcc44,transparent:true,opacity:0.22}));
+solarGroup.add(helixLine);
+
+PLANET_DATA.forEach(([name, au, col, sz, sp, inclDeg, hasRing]) => {
+  const inc = inclDeg * Math.PI / 180;
+  // Orbit ring (tilted)
+  const pts=[];
+  for(let i=0;i<=360;i++){
+    const a=i*Math.PI/180;
+    const x=Math.cos(a)*au*AU;
+    const z=Math.sin(a)*au*AU;
+    pts.push(x, z*Math.sin(inc), z*Math.cos(inc));
+  }
+  const bg=new THREE.BufferGeometry();
+  bg.setAttribute('position',new THREE.BufferAttribute(new Float32Array(pts),3));
+  solarGroup.add(new THREE.LineLoop(bg,new THREE.LineBasicMaterial({color:col,transparent:true,opacity:0.28})));
+
+  // Planet mesh
+  const pGeo = new THREE.SphereGeometry(EARTH_R*sz*2.2, 18, 18);
+  const pMat = new THREE.MeshPhongMaterial({color:col, emissive:col, emissiveIntensity:0.04, shininess:25});
+  const mesh = new THREE.Mesh(pGeo, pMat);
+  solarGroup.add(mesh);
+
+  // Saturn ring
+  let ringMesh = null;
+  if(hasRing){
+    const rGeo = new THREE.RingGeometry(EARTH_R*sz*3.2, EARTH_R*sz*5.8, 64);
+    // Rotate ring UVs for flat appearance
+    const rMat = new THREE.MeshBasicMaterial({color:0xd4c090,transparent:true,opacity:0.55,side:THREE.DoubleSide});
+    ringMesh = new THREE.Mesh(rGeo, rMat);
+    ringMesh.rotation.x = Math.PI / 2.3;
+    solarGroup.add(ringMesh);
+  }
+
+  planetMeshes.push({mesh, ringMesh, au, sp, inc, phase: Math.random()*Math.PI*2});
+});
+
+// Earth orbit ring in solar view
+{
+  const pts=[];
+  for(let i=0;i<=360;i++){const a=i*Math.PI/180;pts.push(Math.cos(a)*AU,0,Math.sin(a)*AU);}
+  const bg=new THREE.BufferGeometry();
+  bg.setAttribute('position',new THREE.BufferAttribute(new Float32Array(pts),3));
+  solarGroup.add(new THREE.LineLoop(bg,new THREE.LineBasicMaterial({color:0x4499dd,transparent:true,opacity:0.38})));
+}
+
+// Moon orbit ring (shown in solar view, around Earth)
+const moonOrbitRadius = EARTH_R * 60;
+const moonGroup = new THREE.Group();
+const moonMesh = new THREE.Mesh(
+  new THREE.SphereGeometry(EARTH_R * 0.27, 14, 14),
+  new THREE.MeshPhongMaterial({color:0xaaaaaa, emissive:0x111111, shininess:10})
+);
+moonGroup.add(moonMesh);
+scene3.add(moonGroup);
+moonGroup.visible = false;
+
+// Moon orbit ring (around Earth in solar view)
+{
+  const pts=[];
+  for(let i=0;i<=360;i++){
+    const a=i*Math.PI/180;
+    pts.push(Math.cos(a)*moonOrbitRadius, Math.sin(a)*moonOrbitRadius*0.09, Math.sin(a)*moonOrbitRadius);
+  }
+  const bg=new THREE.BufferGeometry();
+  bg.setAttribute('position',new THREE.BufferAttribute(new Float32Array(pts),3));
+  solarGroup.add(new THREE.LineLoop(bg,new THREE.LineBasicMaterial({color:0x888888,transparent:true,opacity:0.3})));
+}
+
+// ── SUN (directional light source)
+const sunLight=new THREE.DirectionalLight(0xfff8f0,2.2);
+sunLight.castShadow=true;
+scene3.add(sunLight);
+const ambLight=new THREE.AmbientLight(0x0a1428,1);
+scene3.add(ambLight);
+
+// ── ORBITAL MECHANICS (matching Cesium version)
+const MU=3.986004418e14;
+const ORB_R=EARTH_R+420000;
+const INC=51.6*Math.PI/180;
+const RAAN=30*Math.PI/180;
+const N_MOT=Math.sqrt(MU/Math.pow(ORB_R,3));
+const T_ORB=2*Math.PI/N_MOT;
+const EARTH_ROT=7.2921150e-5;
+let TWARP=10;  // simulation time warp — synced with Earth rotation speed
+
+// ── EARTH ROTATION SPEED (independent of simulation time)
+let earthRotMult=1;        // multiplier: 0=stopped, 1=real, 10/50/200/500=fast
+let earthRotAngle=0;       // accumulated rotation angle (radians)
+
+function setEarthRot(mult){
+  earthRotMult=mult;
+  TWARP = mult === 0 ? 0.1 : mult;  // sync sim speed with rotation (keep 0.1 min so clock ticks)
+  ['er-real','er-10x','er-50x','er-200x','er-500x'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.classList.remove('act');
+  });
+  const idMap={0:'er-stop',1:'er-real',10:'er-10x',50:'er-50x',200:'er-200x',500:'er-500x'};
+  if(idMap[mult]) { const el=document.getElementById(idMap[mult]); if(el) el.classList.add('act'); }
+}
+
+function eciPos(t){
+  const nu=N_MOT*t;
+  const cR=Math.cos(RAAN),sR=Math.sin(RAAN),cI=Math.cos(INC),sI=Math.sin(INC);
+  const xp=ORB_R*Math.cos(nu),yp=ORB_R*Math.sin(nu);
+  return new THREE.Vector3(cR*xp-sR*cI*yp,sI*yp,sR*xp+cR*cI*yp);
+}
+
+function eciToWorld(v,t){
+  // Satellite/debris ECEF uses real Earth rotation (tied to orbital mechanics)
+  const th=EARTH_ROT*t,c=Math.cos(th),s=Math.sin(th);
+  return new THREE.Vector3(c*v.x-s*v.z,v.y,s*v.x+c*v.z);
+}
+
+// Earth mesh rotation uses the independent earthRotAngle — tied to simT for sync
+function applyEarthRotation(){
+  earthRotAngle = EARTH_ROT * simT * earthRotMult;
+  earth.rotation.y = earthRotAngle;
+  atmos.rotation.y = earthRotAngle;
+}
+
+function satWorldPos(t){return eciToWorld(eciPos(t),t);}
+
+// Attitude matrix: +X prograde, +Y orbit-normal, +Z nadir-opposite(zenith)
+function satAttMatrix(t){
+  const pos=eciPos(t);
+  const dt=5;
+  const vel=eciPos(t+dt).sub(eciPos(t-dt)).normalize();
+  const zAx=pos.clone().normalize();
+  const yAx=new THREE.Vector3().crossVectors(zAx,vel).normalize();
+  const xAx=new THREE.Vector3().crossVectors(yAx,zAx).normalize();
+  const m=new THREE.Matrix4().makeBasis(xAx,zAx,yAx.negate());
+  // Apply earth rotation
+  const earthRot=new THREE.Matrix4().makeRotationY(EARTH_ROT*t);
+  return earthRot.multiply(m);
+}
+
+function checkEclipse(t){
+  const p=eciPos(t);
+  if(p.x>0)return false;
+  return Math.sqrt(p.y*p.y+p.z*p.z)<EARTH_R;
+}
+function checkComms(t){
+  const ph=((N_MOT*t)%(2*Math.PI))/(2*Math.PI);
+  return ph>0.15&&ph<0.33;
+}
+
+// ── ORBIT LINE — bright teal, two-layer glow
+{
+  const pts=[];
+  for(let i=0;i<=360;i++){
+    const p=eciPos((i/360)*T_ORB);
+    pts.push(p.x,p.y,p.z);
+  }
+  const bg=new THREE.BufferGeometry();
+  bg.setAttribute('position',new THREE.BufferAttribute(new Float32Array(pts),3));
+  // Inner crisp line
+  scene3.add(new THREE.LineLoop(bg,new THREE.LineBasicMaterial({color:0x00ffc8,transparent:true,opacity:0.90})));
+  // Outer soft halo
+  const bg2=bg.clone();
+  scene3.add(new THREE.LineLoop(bg2,new THREE.LineBasicMaterial({color:0x00dca0,transparent:true,opacity:0.28})));
+}
+
+// ── SATELLITE MODEL
+const satGroup=new THREE.Group();
+scene3.add(satGroup);
+const S=22000; // visual scale
+
+// Materials
+const matBus=new THREE.MeshPhongMaterial({color:0x0d1e34,emissive:0x001a12,emissiveIntensity:0.2,
+  shininess:80,specular:0x224466});
+const matPanel=new THREE.MeshPhongMaterial({color:0x0a1828,emissive:0x000d20,emissiveIntensity:0.3,
+  shininess:120,specular:0x112244});
+const matDish=new THREE.MeshPhongMaterial({color:0xbfd4e8,emissive:0x102030,shininess:200,specular:0x8899aa});
+const matStrut=new THREE.MeshPhongMaterial({color:0x3a5060,shininess:40});
+const matThrust=new THREE.MeshPhongMaterial({color:0x1a2840,emissive:0x0a1828,shininess:60,specular:0x4488cc});
+let matBusEdge; // updated with decision color
+
+// Bus outline (separate mesh, slightly scaled)
+const busGeo=new THREE.BoxGeometry(S*1.4,S*0.38,S*0.55);
+const busMesh=new THREE.Mesh(busGeo,matBus);
+satGroup.add(busMesh);
+
+// Bus wireframe overlay
+const busWire=new THREE.LineSegments(
+  new THREE.EdgesGeometry(busGeo),
+  new THREE.LineBasicMaterial({color:0x00dca0,transparent:true,opacity:0.85})
+);
+satGroup.add(busWire);
+
+// Secondary instrument box
+const modGeo=new THREE.BoxGeometry(S*0.28,S*0.30,S*0.45);
+const modMesh=new THREE.Mesh(modGeo,new THREE.MeshPhongMaterial({color:0x101f30,emissive:0x001810,shininess:60}));
+modMesh.position.set(S*0.85,0,0);
+satGroup.add(modMesh);
+const modWire=new THREE.LineSegments(new THREE.EdgesGeometry(modGeo),new THREE.LineBasicMaterial({color:0x00dca0,transparent:true,opacity:0.5}));
+modMesh.add(modWire);
+
+// Solar panels function
+function makePanels(sign){
+  const wingGroup=new THREE.Group();
+  for(let i=0;i<3;i++){
+    const pg=new THREE.BoxGeometry(S*0.85,S*0.028,S*0.95);
+    const pm=new THREE.Mesh(pg,matPanel);
+    pm.position.set(S*0.05,S*0.015,(1.1+i*1.15)*sign*S);
+    wingGroup.add(pm);
+    const pw=new THREE.LineSegments(new THREE.EdgesGeometry(pg),new THREE.LineBasicMaterial({color:0x1a5fb0,transparent:true,opacity:0.7}));
+    pm.add(pw);
+    // Panel cell lines
+    const lineGroup=new THREE.Group();
+    for(let j=1;j<5;j++){
+      const lg=new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(-S*0.425+j*S*0.17,-S*0.014,0),
+        new THREE.Vector3(-S*0.425+j*S*0.17, S*0.014,0)
+      ]);
+      lineGroup.add(new THREE.Line(lg,new THREE.LineBasicMaterial({color:0x1a5fb0,transparent:true,opacity:0.4})));
+    }
+    pm.add(lineGroup);
+  }
+  // Wing strut boom
+  const boomGeo=new THREE.CylinderGeometry(S*0.018,S*0.018,S*3.8,8);
+  const boom=new THREE.Mesh(boomGeo,matStrut);
+  boom.rotation.x=Math.PI/2;
+  boom.position.set(S*0.05,0,sign*S*2.3);
+  wingGroup.add(boom);
+  return wingGroup;
+}
+satGroup.add(makePanels(1));
+satGroup.add(makePanels(-1));
+
+// HGA nadir boom
+const hgaBoomGeo=new THREE.CylinderGeometry(S*0.02,S*0.02,S*0.6,8);
+const hgaBoom=new THREE.Mesh(hgaBoomGeo,matStrut);
+hgaBoom.position.set(0,-S*0.5,0); // -Y = nadir
+satGroup.add(hgaBoom);
+
+// HGA dish
+const dishGeo=new THREE.CylinderGeometry(S*0.44,S*0.08,S*0.06,24);
+const dish=new THREE.Mesh(dishGeo,matDish);
+dish.position.set(0,-S*0.84,0);
+satGroup.add(dish);
+const dishRim=new THREE.LineLoop(
+  new THREE.CircleGeometry(S*0.44,24),
+  new THREE.LineBasicMaterial({color:0xaabbcc,transparent:true,opacity:0.5})
+);
+dishRim.position.set(0,-S*0.84,0);
+dishRim.rotation.x=Math.PI/2;
+satGroup.add(dishRim);
+
+// Star tracker pod
+const stGeo=new THREE.BoxGeometry(S*0.15,S*0.18,S*0.15);
+const stMesh=new THREE.Mesh(stGeo,new THREE.MeshPhongMaterial({color:0x1a3050,emissive:0x0a1828}));
+stMesh.position.set(-S*0.3,S*0.3,0);
+satGroup.add(stMesh);
+stMesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(stGeo),new THREE.LineBasicMaterial({color:0x38bdf8,transparent:true,opacity:0.7})));
+
+// Thrusters
+[-1,1].forEach(side=>{
+  const tGeo=new THREE.CylinderGeometry(S*0.06,S*0.09,S*0.16,8);
+  const tm=new THREE.Mesh(tGeo,matThrust);
+  tm.position.set(-S*0.78,-S*0.1,side*S*0.22);
+  satGroup.add(tm);
+  tm.add(new THREE.LineSegments(new THREE.EdgesGeometry(tGeo),new THREE.LineBasicMaterial({color:0x4488cc,transparent:true,opacity:0.6})));
+});
+
+// Velocity arrow (prograde)
+const arrowMat=new THREE.LineBasicMaterial({color:0x38bdf8,transparent:true,opacity:0.75});
+const velArrowGroup=new THREE.Group();
+scene3.add(velArrowGroup);
+const vArrGeo=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0),new THREE.Vector3(S*3.5,0,0)]);
+velArrowGroup.add(new THREE.Line(vArrGeo,arrowMat));
+const vConeGeo=new THREE.ConeGeometry(S*0.18,S*0.6,8);
+const vCone=new THREE.Mesh(vConeGeo,new THREE.MeshBasicMaterial({color:0x38bdf8,transparent:true,opacity:0.75}));
+vCone.rotation.z=-Math.PI/2;vCone.position.x=S*3.8;
+velArrowGroup.add(vCone);
+
+// Nadir arrow
+const nadirArrowGroup=new THREE.Group();
+scene3.add(nadirArrowGroup);
+const nArrGeo=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0),new THREE.Vector3(0,-S*3.5,0)]);
+nadirArrowGroup.add(new THREE.Line(nArrGeo,new THREE.LineBasicMaterial({color:0xf5a130,transparent:true,opacity:0.65})));
+const nConeGeo=new THREE.ConeGeometry(S*0.18,S*0.6,8);
+const nCone=new THREE.Mesh(nConeGeo,new THREE.MeshBasicMaterial({color:0xf5a130,transparent:true,opacity:0.65}));
+nCone.position.y=-S*3.8;
+nadirArrowGroup.add(nCone);
+
+// Ground station marker
+const gsDot=new THREE.Mesh(
+  new THREE.SphereGeometry(35000,8,8),
+  new THREE.MeshBasicMaterial({color:0x00dca0})
+);
+const GS_LAT=28.5*Math.PI/180,GS_LON=-80.6*Math.PI/180;
+gsDot.position.set(
+  EARTH_R*1.002*Math.cos(GS_LAT)*Math.cos(GS_LON),
+  EARTH_R*1.002*Math.sin(GS_LAT),
+  -EARTH_R*1.002*Math.cos(GS_LAT)*Math.sin(GS_LON)
+);
+scene3.add(gsDot);
+
+// Comms link line
+const commLineGeo=new THREE.BufferGeometry();
+const commLinePts=new Float32Array(6);
+commLineGeo.setAttribute('position',new THREE.BufferAttribute(commLinePts,3));
+const commLine=new THREE.Line(commLineGeo,new THREE.LineBasicMaterial({color:0x00dca0,transparent:true,opacity:0.5}));
+scene3.add(commLine);
+
+// ── DEBRIS / NEAR-COLLISION SATELLITES
+const DEBRIS_DEFS=[
+  {color:0xff3333,raan:32*Math.PI/180,  inc:51.2*Math.PI/180, alt:EARTH_R+418000, phase:2.80, sc:0.38},
+  {color:0xff8800,raan:95*Math.PI/180,  inc:65.0*Math.PI/180, alt:EARTH_R+422000, phase:1.10, sc:0.30},
+  {color:0xffdd00,raan:155*Math.PI/180, inc:97.0*Math.PI/180, alt:EARTH_R+415000, phase:4.60, sc:0.26},
+  {color:0xff22aa,raan:28*Math.PI/180,  inc:51.8*Math.PI/180, alt:EARTH_R+421000, phase:0.35, sc:0.32},
+];
+const debrisGroups=[];
+
+function debrisEciPos(d,t){
+  const n=Math.sqrt(MU/Math.pow(d.alt,3));
+  const nu=n*t+d.phase;
+  const cR=Math.cos(d.raan),sR=Math.sin(d.raan),cI=Math.cos(d.inc),sI=Math.sin(d.inc);
+  const xp=d.alt*Math.cos(nu),yp=d.alt*Math.sin(nu);
+  return new THREE.Vector3(cR*xp-sR*cI*yp,sI*yp,sR*xp+cR*cI*yp);
+}
+function debrisAtt(d,t){
+  const pos=debrisEciPos(d,t);
+  const dt=5, vel=debrisEciPos(d,t+dt).sub(debrisEciPos(d,t-dt)).normalize();
+  const zAx=pos.clone().normalize();
+  const yAx=new THREE.Vector3().crossVectors(zAx,vel).normalize();
+  const xAx=new THREE.Vector3().crossVectors(yAx,zAx).normalize();
+  const m=new THREE.Matrix4().makeBasis(xAx,zAx,yAx.negate());
+  return new THREE.Matrix4().makeRotationY(EARTH_ROT*t).multiply(m);
+}
+
+DEBRIS_DEFS.forEach(d=>{
+  const g=new THREE.Group();
+  const sc=S*d.sc;
+  // Body
+  const bGeo=new THREE.BoxGeometry(sc*1.2,sc*0.34,sc*0.50);
+  g.add(new THREE.Mesh(bGeo,new THREE.MeshPhongMaterial({color:0x111820,emissive:d.color,emissiveIntensity:0.12})));
+  g.add(new THREE.LineSegments(new THREE.EdgesGeometry(bGeo),new THREE.LineBasicMaterial({color:d.color,transparent:true,opacity:0.85})));
+  // Tiny panels
+  [-1,1].forEach(s=>{
+    const pGeo=new THREE.BoxGeometry(sc*0.65,sc*0.02,sc*0.70);
+    const pm=new THREE.Mesh(pGeo,new THREE.MeshPhongMaterial({color:0x050d18,emissive:0x000818}));
+    pm.position.set(0,0,s*sc*0.80);
+    g.add(pm);
+    const pw=new THREE.LineSegments(new THREE.EdgesGeometry(pGeo),new THREE.LineBasicMaterial({color:d.color,transparent:true,opacity:0.55}));
+    pw.position.copy(pm.position);
+    g.add(pw);
+  });
+  // Proximity glow sphere
+  const glowMesh=new THREE.Mesh(
+    new THREE.SphereGeometry(sc*1.8,8,8),
+    new THREE.MeshBasicMaterial({color:d.color,transparent:true,opacity:0.05,side:THREE.BackSide})
+  );
+  glowMesh.userData.isGlow=true;
+  g.add(glowMesh);
+  scene3.add(g);
+  debrisGroups.push({g,d});
+
+  // Orbit ring for this debris — bright colored, two-layer
+  const pts=[];
+  const n=Math.sqrt(MU/Math.pow(d.alt,3)),period=2*Math.PI/n;
+  for(let i=0;i<=360;i++){
+    const nu=d.phase+(i/360)*2*Math.PI;
+    const cR=Math.cos(d.raan),sR=Math.sin(d.raan),cI=Math.cos(d.inc),sI=Math.sin(d.inc);
+    const xp=d.alt*Math.cos(nu),yp=d.alt*Math.sin(nu);
+    pts.push(cR*xp-sR*cI*yp,sI*yp,sR*xp+cR*cI*yp);
+  }
+  const bg=new THREE.BufferGeometry();
+  bg.setAttribute('position',new THREE.BufferAttribute(new Float32Array(pts),3));
+  scene3.add(new THREE.LineLoop(bg,new THREE.LineBasicMaterial({color:d.color,transparent:true,opacity:0.65})));
+  scene3.add(new THREE.LineLoop(bg.clone(),new THREE.LineBasicMaterial({color:d.color,transparent:true,opacity:0.18})));
+});
+
+// Conjunction warning line (flashes between SAT-7 and nearest debris)
+const cjGeo=new THREE.BufferGeometry();
+const cjPts=new Float32Array(6);
+cjGeo.setAttribute('position',new THREE.BufferAttribute(cjPts,3));
+const cjLine=new THREE.Line(cjGeo,new THREE.LineBasicMaterial({color:0xff0033,transparent:true,opacity:0.8}));
+cjLine.visible=false;
+scene3.add(cjLine);
+
+// ── OPERATIONAL SATELLITE CONSTELLATION ─────────────────────────
+const OPS_SATS = [
+  // ISS-like — same inc, different phase
+  {label:'ISS', color:0xffffff, raan:25*Math.PI/180, inc:51.6*Math.PI/180, alt:EARTH_R+408000, phase:Math.PI*0.6},
+  // GPS A — high altitude MEO
+  {label:'GPS-A', color:0x44aaff, raan:0,            inc:55*Math.PI/180, alt:EARTH_R+20200000, phase:0.0},
+  {label:'GPS-B', color:0x44aaff, raan:120*Math.PI/180,inc:55*Math.PI/180,alt:EARTH_R+20200000, phase:2.1},
+  {label:'GPS-C', color:0x44aaff, raan:240*Math.PI/180,inc:55*Math.PI/180,alt:EARTH_R+20200000, phase:4.2},
+  // Polar observation sat
+  {label:'POL-1', color:0xff8844, raan:80*Math.PI/180, inc:98*Math.PI/180, alt:EARTH_R+500000, phase:1.5},
+  // Starlink-like
+  {label:'SLK-1', color:0xaaddff, raan:15*Math.PI/180, inc:53*Math.PI/180, alt:EARTH_R+550000, phase:0.8},
+  {label:'SLK-2', color:0xaaddff, raan:75*Math.PI/180, inc:53*Math.PI/180, alt:EARTH_R+550000, phase:3.0},
+];
+
+const opsSatGroups = [];
+OPS_SATS.forEach(def => {
+  const g = new THREE.Group();
+  const sc = S * 0.22;
+  // Tiny box
+  const bGeo = new THREE.BoxGeometry(sc, sc*0.25, sc*0.5);
+  g.add(new THREE.Mesh(bGeo, new THREE.MeshPhongMaterial({color:def.color,emissive:def.color,emissiveIntensity:0.1})));
+  g.add(new THREE.LineSegments(new THREE.EdgesGeometry(bGeo), new THREE.LineBasicMaterial({color:def.color,transparent:true,opacity:0.7})));
+  // Tiny panels
+  [-1,1].forEach(s=>{
+    const pGeo=new THREE.BoxGeometry(sc*0.6,sc*0.015,sc*0.5);
+    const pm=new THREE.Mesh(pGeo,new THREE.MeshPhongMaterial({color:0x0a1020,emissive:0x000a18}));
+    pm.position.set(0,0,s*sc*0.55);
+    g.add(pm);
+  });
+  scene3.add(g);
+
+  // Orbit ring
+  const n=Math.sqrt(MU/Math.pow(def.alt,3));
+  const pts=[];
+  for(let i=0;i<=360;i++){
+    const nu=(i/360)*2*Math.PI;
+    const cR=Math.cos(def.raan),sR=Math.sin(def.raan),cI=Math.cos(def.inc),sI=Math.sin(def.inc);
+    const xp=def.alt*Math.cos(nu),yp=def.alt*Math.sin(nu);
+    pts.push(cR*xp-sR*cI*yp,sI*yp,sR*xp+cR*cI*yp);
+  }
+  const bg=new THREE.BufferGeometry();
+  bg.setAttribute('position',new THREE.BufferAttribute(new Float32Array(pts),3));
+  scene3.add(new THREE.LineLoop(bg,new THREE.LineBasicMaterial({color:def.color,transparent:true,opacity:0.35})));
+
+  opsSatGroups.push({g,def});
+});
+
+function refreshSatColor(){
+  const col=new THREE.Color(SCOL[decision]);
+  busWire.material.color.set(col);
+  modWire.material.color.set(col);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   CAMERA CONTROL
+══════════════════════════════════════════════════════════════ */
+let camMode='track';
+
+// Spherical coords for orbit/free modes
+let isDragging=false, prevMouse={x:0,y:0};
+let camTheta=0.5, camPhi=0.4, camDist=ORB_R*2.5;
+let velTheta=0, velPhi=0;
+
+function syncThetaPhiFromCamera(){
+  const r=camera3.position.length();
+  camDist=r;
+  camPhi=Math.acos(Math.max(-1,Math.min(1,camera3.position.y/r)));
+  camTheta=Math.atan2(camera3.position.z,camera3.position.x);
+}
+
+// Drag rotates globe only in orbit/free modes — never auto-switches mode
+function canDragRotate(){ return camMode==='orbit'||camMode==='free'||camMode==='solar'; }
+
+renderer.domElement.style.cursor='grab';
+
+renderer.domElement.addEventListener('mousedown',e=>{
+  isDragging=true;
+  prevMouse={x:e.clientX,y:e.clientY};
+  velTheta=0; velPhi=0;
+  if(canDragRotate()) syncThetaPhiFromCamera();
+  renderer.domElement.style.cursor='grabbing';
+});
+
+renderer.domElement.addEventListener('mousemove',e=>{
+  if(!isDragging||!canDragRotate())return;
+  const dx=(e.clientX-prevMouse.x)*.004, dy=(e.clientY-prevMouse.y)*.004;
+  velTheta=dx; velPhi=dy;
+  camTheta-=dx;
+  camPhi=Math.max(.05,Math.min(Math.PI-.05,camPhi+dy));
+  prevMouse={x:e.clientX,y:e.clientY};
+  // NO mode switching — current mode stays active
+});
+
+renderer.domElement.addEventListener('mouseup', ()=>{ isDragging=false; renderer.domElement.style.cursor='grab'; });
+renderer.domElement.addEventListener('mouseleave',()=>{ isDragging=false; renderer.domElement.style.cursor='grab'; });
+
+renderer.domElement.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const minD = camMode==='solar' ? AU*2 : EARTH_R*1.15;
+  const maxD = camMode==='solar' ? AU*50 : ORB_R*7;
+  camDist=Math.max(minD,Math.min(maxD,camDist*Math.exp(e.deltaY*.0008)));
+  syncThetaPhiFromCamera();
+},{passive:false});
+
+// Touch: drag in orbit/free only, pinch-zoom everywhere
+let lastTouch=null, lastPinchDist=null;
+renderer.domElement.addEventListener('touchstart',e=>{
+  e.preventDefault();
+  if(e.touches.length===1){
+    lastTouch={x:e.touches[0].clientX,y:e.touches[0].clientY};
+    velTheta=0; velPhi=0;
+    if(canDragRotate()) syncThetaPhiFromCamera();
+    lastPinchDist=null;
+  } else if(e.touches.length===2){
+    const dx=e.touches[0].clientX-e.touches[1].clientX;
+    const dy=e.touches[0].clientY-e.touches[1].clientY;
+    lastPinchDist=Math.sqrt(dx*dx+dy*dy);
+    lastTouch=null;
+  }
+},{passive:false});
+
+renderer.domElement.addEventListener('touchmove',e=>{
+  e.preventDefault();
+  if(e.touches.length===1&&lastTouch&&canDragRotate()){
+    const dx=(e.touches[0].clientX-lastTouch.x)*.004;
+    const dy=(e.touches[0].clientY-lastTouch.y)*.004;
+    velTheta=dx; velPhi=dy;
+    camTheta-=dx;
+    camPhi=Math.max(.05,Math.min(Math.PI-.05,camPhi+dy));
+    lastTouch={x:e.touches[0].clientX,y:e.touches[0].clientY};
+    // NO mode switch
+  } else if(e.touches.length===2&&lastPinchDist!==null){
+    const dx=e.touches[0].clientX-e.touches[1].clientX;
+    const dy=e.touches[0].clientY-e.touches[1].clientY;
+    const dist=Math.sqrt(dx*dx+dy*dy);
+    camDist=Math.max(EARTH_R*1.15,Math.min(ORB_R*7,camDist*(lastPinchDist/dist)));
+    lastPinchDist=dist;
+  }
+},{passive:false});
+renderer.domElement.addEventListener('touchend',()=>{lastTouch=null;lastPinchDist=null;});
+
+function setCam(mode){
+  camMode=mode;
+  ['btn-trk','btn-orb','btn-ndr','btn-fre','btn-sol'].forEach(b=>{const e=document.getElementById(b);if(e)e.classList.remove('act');});
+  const map={track:'btn-trk',orbit:'btn-orb',nadir:'btn-ndr',free:'btn-fre',solar:'btn-sol'};
+  if(map[mode]) document.getElementById(map[mode]).classList.add('act');
+  if(mode==='orbit'){ camTheta=0.5; camPhi=0.4; camDist=ORB_R*2.8; }
+  if(mode==='free' && camDist<ORB_R*.5) camDist=ORB_R*2.5;
+  if(mode==='solar'){
+    camTheta=0.3; camPhi=0.32; camDist=AU*28;
+  }
+  const isSolar = mode==='solar';
+  sunGroup.visible  = isSolar;
+  solarGroup.visible= isSolar;
+  moonGroup.visible = isSolar;
+  velTheta=0; velPhi=0;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   RENDER LOOP
+══════════════════════════════════════════════════════════════ */
+let lastFrame=performance.now();
+
+function animate(){
+  requestAnimationFrame(animate);
+  const now=performance.now();
+  const dt=Math.min((now-lastFrame)/1000,.05)*TWARP;
+  lastFrame=now;
+  simT+=dt;
+  missionSec=Math.floor(simT);
+
+  // Advance Earth's independent rotation angle
+  const rawDt=Math.min((now-lastFrame+dt/TWARP*1000)/1000,.05); // real dt before warp
+  earthRotAngle = EARTH_ROT * simT * earthRotMult;
+  applyEarthRotation();
+
+  // Update warp overlay
+  document.getElementById('ov-warp').textContent = 'WARP ×' + (earthRotMult===0?'0':earthRotMult);
+
+  // Sun direction + position — Earth orbits sun, sun drifts upward (galactic helix)
+  const sunAngle = simT * SUN_ANGLE_RATE;
+  const sunDriftY = simT * SUN_DRIFT_UP;
+  const sunWorldPos = new THREE.Vector3(Math.cos(sunAngle)*AU, sunDriftY, Math.sin(sunAngle)*AU);
+  sunGroup.position.copy(sunWorldPos);
+  sunMat.uniforms.uTime.value = simT * 0.002;
+
+  // Sun direction for Earth shaders (vector from Earth→Sun, normalized)
+  const sunDir = sunWorldPos.clone().normalize();
+  sunLight.position.copy(sunWorldPos.clone().normalize().multiplyScalar(1.5e8));
+  earthMat.uniforms.uSunDir.value.copy(sunDir);
+  atmosMat.uniforms.uSunDir.value.copy(sunDir);
+  earthMat.uniforms.uTime.value = simT * 0.01;
+
+  // Moon orbits Earth
+  const moonAngle = simT * 2.665e-6; // ~27.3 day period in sim-seconds
+  moonMesh.position.set(
+    Math.cos(moonAngle)*moonOrbitRadius,
+    Math.sin(moonAngle*0.09)*moonOrbitRadius*0.09,
+    Math.sin(moonAngle)*moonOrbitRadius
+  );
+  moonGroup.visible = camMode === 'solar';
+
+  // Update planets (positioned relative to sun, with 3D inclined orbits)
+  planetMeshes.forEach(({mesh, ringMesh, au, sp, inc, phase})=>{
+    const a = sunAngle * sp + phase;
+    const x = Math.cos(a)*au*AU;
+    const z = Math.sin(a)*au*AU;
+    mesh.position.set(
+      sunWorldPos.x + x,
+      sunWorldPos.y + z*Math.sin(inc),
+      sunWorldPos.z + z*Math.cos(inc)
+    );
+    mesh.rotation.y += 0.005;
+    if(ringMesh){
+      ringMesh.position.copy(mesh.position);
+      ringMesh.rotation.y = mesh.rotation.y * 0.3;
+    }
+  });
+
+  // Update 3D helix trail (past sun positions showing galactic drift)
+  if(camMode === 'solar'){
+    for(let i=0;i<HELIX_N;i++){
+      const t2 = simT - (HELIX_N - i) * 2000;
+      const sa = t2 * SUN_ANGLE_RATE;
+      helixPts[i*3]   = Math.cos(sa)*AU;
+      helixPts[i*3+1] = t2 * SUN_DRIFT_UP;
+      helixPts[i*3+2] = Math.sin(sa)*AU;
+    }
+    helixGeo.attributes.position.needsUpdate = true;
+  }
+
+  // ── Operational satellites
+  opsSatGroups.forEach(({g, def})=>{
+    const n = Math.sqrt(MU/Math.pow(def.alt,3));
+    const nu = n*simT + def.phase;
+    const cR=Math.cos(def.raan),sR=Math.sin(def.raan),cI=Math.cos(def.inc),sI=Math.sin(def.inc);
+    const xp=def.alt*Math.cos(nu),yp=def.alt*Math.sin(nu);
+    const eci=new THREE.Vector3(cR*xp-sR*cI*yp,sI*yp,sR*xp+cR*cI*yp);
+    g.position.copy(eciToWorld(eci,simT));
+    // Orient nadir-pointing
+    const up = g.position.clone().normalize();
+    g.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), up);
+  });
+
+  // Orbital state
+  const nu=((N_MOT*simT)*180/Math.PI+36000)%360;
+  inEcl=checkEclipse(simT);
+  inGs=checkComms(simT);
+
+  // Satellite position & attitude
+  const satECI=eciPos(simT);
+  const satW=eciToWorld(satECI,simT);
+  const attMat=satAttMatrix(simT);
+  satGroup.position.copy(satW);
+  satGroup.setRotationFromMatrix(attMat);
+  velArrowGroup.position.copy(satW);
+  velArrowGroup.setRotationFromMatrix(attMat);
+  nadirArrowGroup.position.copy(satW);
+  nadirArrowGroup.setRotationFromMatrix(attMat);
+
+  // Comms line
+  if(inGs){
+    commLinePts[0]=satW.x;commLinePts[1]=satW.y;commLinePts[2]=satW.z;
+    commLinePts[3]=gsDot.position.x;commLinePts[4]=gsDot.position.y;commLinePts[5]=gsDot.position.z;
+    commLineGeo.attributes.position.needsUpdate=true;
+    commLine.visible=true;
+  }else{commLine.visible=false;}
+
+  // Lat/lon from ECEF
+  const wp=satW;
+  const lat=(Math.atan2(wp.y,Math.sqrt(wp.x*wp.x+wp.z*wp.z))*180/Math.PI).toFixed(2);
+  const lon=(Math.atan2(-wp.z,wp.x)*180/Math.PI).toFixed(2);
+  document.getElementById('h-lat').textContent=lat+'°';
+  document.getElementById('h-lon').textContent=lon+'°';
+  document.getElementById('h-alt').textContent=(420.3+12*Math.sin(simT*.0001)).toFixed(1);
+
+  // ── DEBRIS update + conjunction detection
+  let nearestDist=Infinity, nearestPos=null;
+  debrisGroups.forEach(({g,d})=>{
+    const debECI=debrisEciPos(d,simT);
+    const debW=eciToWorld(debECI,simT);
+    g.position.copy(debW);
+    g.setRotationFromMatrix(debrisAtt(d,simT));
+    const dist=satW.distanceTo(debW);
+    // Pulse glow intensity with proximity
+    const glow=g.children.find(c=>c.userData.isGlow);
+    if(glow){
+      const prox=Math.max(0,1-dist/(S*90));
+      glow.material.opacity=0.04+prox*0.22;
+      if(dist<S*28) glow.material.color.setHex(0xff0022);
+      else glow.material.color.setHex(d.color);
+    }
+    if(dist<nearestDist){nearestDist=dist;nearestPos=debW.clone();}
+  });
+  // Show conjunction warning line when within threshold
+  const WARN=S*65;
+  if(nearestDist<WARN&&nearestPos){
+    cjPts[0]=satW.x;cjPts[1]=satW.y;cjPts[2]=satW.z;
+    cjPts[3]=nearestPos.x;cjPts[4]=nearestPos.y;cjPts[5]=nearestPos.z;
+    cjGeo.attributes.position.needsUpdate=true;
+    cjLine.material.opacity=(0.4+0.6*(1-nearestDist/WARN))*(0.5+0.5*Math.sin(simT*9));
+    cjLine.visible=true;
+  } else {
+    cjLine.visible=false;
+  }
+
+  // Constraints & UI
+  runConstraints();
+  updateUI(nu);
+
+  // Camera
+  if(camMode==='track'){
+    // Lock behind-above satellite in orbit frame
+    const back=new THREE.Vector3(-S*5,S*4,S*2);
+    back.applyMatrix4(new THREE.Matrix4().extractRotation(attMat));
+    const camPos=satW.clone().add(back);
+    camera3.position.lerp(camPos,.12);
+    camera3.lookAt(satW);
+  } else if(camMode==='nadir'){
+    const up=satW.clone().normalize().multiplyScalar(S*18);
+    camera3.position.lerp(satW.clone().add(up),.12);
+    camera3.lookAt(satW);
+  } else if(camMode==='orbit'){
+    const cx=camDist*Math.sin(camPhi)*Math.cos(camTheta);
+    const cy=camDist*Math.cos(camPhi);
+    const cz=camDist*Math.sin(camPhi)*Math.sin(camTheta);
+    camera3.position.lerp(new THREE.Vector3(cx,cy,cz),.06);
+    camera3.lookAt(0,0,0);
+  } else if(camMode==='solar'){
+    if(!isDragging){velTheta*=0.88;velPhi*=0.88;camTheta-=velTheta;camPhi=Math.max(.05,Math.min(Math.PI-.05,camPhi+velPhi));}
+    const cx=camDist*Math.sin(camPhi)*Math.cos(camTheta);
+    const cy=camDist*Math.cos(camPhi);
+    const cz=camDist*Math.sin(camPhi)*Math.sin(camTheta);
+    camera3.position.set(cx,cy,cz);
+    // Look at midpoint between Earth and Sun
+    camera3.lookAt(sunWorldPos.clone().multiplyScalar(0.5));
+  } else {
+    // Free cam — drag to orbit Earth, scroll to zoom, inertia coasting
+    if(!isDragging){
+      velTheta*=0.88; velPhi*=0.88;
+      camTheta-=velTheta;
+      camPhi=Math.max(.05,Math.min(Math.PI-.05,camPhi+velPhi));
+    }
+    const cx=camDist*Math.sin(camPhi)*Math.cos(camTheta);
+    const cy=camDist*Math.cos(camPhi);
+    const cz=camDist*Math.sin(camPhi)*Math.sin(camTheta);
+    camera3.position.set(cx,cy,cz);
+    camera3.lookAt(0,0,0);
+  }
+
+  renderer.render(scene3,camera3);
+}
+
+// ── INIT
+buildUI();
+camera3.position.set(0,ORB_R*1.8,ORB_R*2.2);
+camera3.lookAt(0,0,0);
+animate();
+</script>
+</body>
+</html>
